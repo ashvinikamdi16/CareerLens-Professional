@@ -1,0 +1,4 @@
+title,company,location,experience_level,description,required_skills,apply_url
+Junior Python Developer,SampleTech,Remote / India,0-2 years,"Build Python APIs and database integrations", "Python|SQL|FastAPI|Git|REST API",https://example.com/jobs/python-developer
+Data Analyst Trainee,InsightWorks,Remote / India,0-1 years,"Analyse datasets with SQL Excel and Python", "SQL|Excel|Python|Pandas|Power BI",https://example.com/jobs/data-analyst
+Frontend Developer Intern,PixelCraft,Pune / Hybrid,Internship,"Build interfaces with HTML CSS JavaScript React", "HTML|CSS|JavaScript|React|Git",https://example.com/jobs/frontend-intern
