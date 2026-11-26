@@ -36,20 +36,74 @@ def _contains(text: str, term: str) -> bool:
 
 def extract_skills(text: str) -> list[str]:
     lower = text.lower()
-    found = []
-    for canonical, aliases in SKILL_ALIASES.items():
-        if any(_contains(lower, alias) for alias in aliases):
-            found.append(canonical)
-    return found
+    return [canonical for canonical, aliases in SKILL_ALIASES.items()
+            if any(_contains(lower, alias) for alias in aliases)]
 
 def estimate_experience_years(text: str) -> float | None:
-    patterns = [r"(\d+(?:\.\d+)?)\s*\+?\s*years?\s+(?:of\s+)?(?:experience|exp)", r"experience\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*years?"]
+    patterns = [r"(\d+(?:\.\d+)?)\s*\+?\s*years?\s+(?:of\s+)?(?:experience|exp)",
+                r"experience\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*years?"]
     values = []
     for pattern in patterns:
         for match in re.findall(pattern, text, flags=re.IGNORECASE):
-            try: values.append(float(match))
-            except ValueError: pass
+            try:
+                values.append(float(match))
+            except ValueError:
+                pass
     return max(values) if values else None
+
+def assess_resume_authenticity(text: str, word_count: int | None = None) -> dict:
+    """Heuristic integrity screening. It flags review signals, never declares a document fake."""
+    normalized = re.sub(r"\s+", " ", text).strip().lower()
+    lines = [re.sub(r"\s+", " ", line).strip().lower() for line in text.splitlines()]
+    lines = [line for line in lines if len(line) > 18]
+    words = re.findall(r"\b[\w+#.\-]+\b", text)
+    count = len(words) if word_count is None else word_count
+    signals = []
+    score = 0
+
+    placeholders = [
+        "lorem ipsum", "your name here", "your email here", "insert name",
+        "replace with your", "sample resume", "dummy resume", "john doe",
+        "jane doe", "your phone number", "company name here"
+    ]
+    found_placeholders = [term for term in placeholders if term in normalized]
+    if found_placeholders:
+        score += min(45, 18 + 9 * (len(found_placeholders) - 1))
+        signals.append("Template or sample placeholder wording detected: " + ", ".join(found_placeholders[:3]))
+
+    if count < 35:
+        score += 35
+        signals.append("Very little readable text was extracted; the file may be incomplete or parsing may have failed.")
+    elif count < 75:
+        score += 15
+        signals.append("The extracted resume text is unusually short.")
+
+    if not re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", text):
+        score += 8
+        signals.append("No recognizable email address was found.")
+
+    if len(lines) >= 5:
+        repeated = len(lines) - len(set(lines))
+        repeated_ratio = repeated / len(lines)
+        if repeated_ratio >= 0.35:
+            score += 20
+            signals.append("Several long text lines are repeated, which may indicate duplicated or generated content.")
+
+    generic_claims = ["hardworking and dedicated", "excellent communication skills", "team player"]
+    generic_count = sum(1 for phrase in generic_claims if phrase in normalized)
+    if generic_count >= 2 and not re.search(r"\b(increased|reduced|built|created|managed|developed|achieved|improved)\b", normalized):
+        score += 10
+        signals.append("Many generic claims appear without clear supporting achievements.")
+
+    score = min(100, score)
+    level = "High review needed" if score >= 55 else "Review recommended" if score >= 25 else "Low indicators"
+    return {
+        "risk_score": score,
+        "risk_level": level,
+        "signals": signals,
+        "status": "Needs manual review" if score >= 25 else "No strong warning signals detected",
+        "disclaimer": "This is a heuristic screening, not proof that a resume is genuine or fake. Verify claims, dates, qualifications and references independently."
+    }
 
 def build_analysis(text: str, parser_metadata: dict | None = None) -> dict:
     skills = extract_skills(text)
@@ -86,6 +140,7 @@ def build_analysis(text: str, parser_metadata: dict | None = None) -> dict:
     if len(skills) < 4: suggestions.append("Add relevant technical skills that you can confidently demonstrate.")
     if not suggestions: suggestions.append("Tailor keywords and achievements to each target job; keep all claims accurate.")
     missing_common = [s for s in all_known if s not in skills][:8]
+    authenticity = assess_resume_authenticity(text, len(words))
     return {
         "readiness_score": readiness,
         "score_label": "CareerLens Resume Readiness Score (heuristic; not a proprietary ATS score)",
@@ -95,6 +150,7 @@ def build_analysis(text: str, parser_metadata: dict | None = None) -> dict:
         "estimated_experience_years": experience_years,
         "word_count": len(words),
         "has_contact_information": has_contact,
+        "authenticity_check": authenticity,
         "profile_summary": {
             "email": email_match.group(0) if email_match else None,
             "phone": phone_match.group(0).strip() if phone_match else None,
@@ -105,7 +161,7 @@ def build_analysis(text: str, parser_metadata: dict | None = None) -> dict:
         "possible_missing_skills": missing_common,
         "improvement_suggestions": suggestions,
         "parser_metadata": parser_metadata or {},
-        "limitations": ["Skill extraction uses a maintained taxonomy and can miss synonyms or domain-specific skills.", "The readiness score is a transparent heuristic, not an employer ATS result.", "Always review extracted information before relying on recommendations."]
+        "limitations": ["Skill extraction uses a maintained taxonomy and can miss synonyms or domain-specific skills.", "The readiness score is a transparent heuristic, not an employer ATS result.", "Authenticity indicators are not proof of fraud; manually verify claims and documents.", "Always review extracted information before relying on recommendations."]
     }
 
 def match_jobs(resume_text: str, skills: list[str], jobs: list[dict], limit: int = 10) -> list[dict]:
