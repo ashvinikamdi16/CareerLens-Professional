@@ -1,17 +1,42 @@
 import os
-import time
 import requests
 import streamlit as st
 
 st.set_page_config(page_title="CareerLens | Resume Intelligence", page_icon="🎯", layout="wide")
-API = os.getenv("API_BASE_URL", "http://localhost:8000/api/v1").rstrip("/")
+
+# Streamlit Community Cloud stores secrets in st.secrets; local/Render environments can use env vars.
+try:
+    API = str(st.secrets.get("API_BASE_URL", os.getenv("API_BASE_URL", "http://localhost:8000/api/v1"))).rstrip("/")
+except Exception:
+    API = os.getenv("API_BASE_URL", "http://localhost:8000/api/v1").rstrip("/")
 
 st.markdown("""
 <style>
-.block-container {padding-top: 2rem; padding-bottom: 3rem; max-width: 1200px;}
-.hero {padding: 1.5rem 1.7rem; border-radius: 18px; background: linear-gradient(120deg,#101c3a,#243f73); color: white; margin-bottom: 1rem;}
-.hero p {color:#d9e4ff; margin-bottom:0;}
-.small-muted {color:#718096; font-size:.9rem;}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap');
+:root { --cl-ink:#18213d; --cl-muted:#77819b; --cl-purple:#7657e8; --cl-blue:#4d83ee; }
+html, body, [class*="css"] { font-family:'DM Sans',sans-serif; }
+.stApp { background: radial-gradient(ellipse at 85% 0%, rgba(128,103,239,.14), transparent 34%), linear-gradient(145deg,#f7f8ff 0%,#eef2ff 52%,#f9f7ff 100%); color:var(--cl-ink); }
+[data-testid="stHeader"] { background:rgba(247,248,255,.82); }
+.block-container { padding-top:2rem; padding-bottom:3rem; max-width:1320px; }
+[data-testid="stSidebar"] { background:linear-gradient(180deg,#111a35 0%,#202b50 55%,#30265a 100%); border-right:1px solid rgba(255,255,255,.08); }
+[data-testid="stSidebar"] * { color:#f4f5ff !important; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label { padding:9px 12px; border-radius:11px; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover { background:rgba(255,255,255,.12); }
+[data-testid="stSidebar"] button { border:1px solid rgba(255,255,255,.2); border-radius:12px; }
+.hero { padding:34px 38px; border-radius:25px; color:white; background:linear-gradient(110deg,rgba(17,25,54,.96),rgba(67,61,139,.90)),url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=85') center/cover; box-shadow:0 18px 45px rgba(36,42,91,.18); margin:4px 0 24px; }
+.hero h1 { font-family:'Manrope',sans-serif; font-size:2.6rem; font-weight:800; letter-spacing:-1.4px; margin:0 0 8px; }
+.hero p { color:#e4e8ff; font-size:1.05rem; margin:0; }
+.eyebrow { color:#bfc8ff; text-transform:uppercase; letter-spacing:2px; font-size:.72rem; font-weight:800; margin-bottom:10px; }
+.section-kicker { color:#7565c9; font-size:.75rem; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
+div[data-testid="stMetric"] { background:rgba(255,255,255,.86); border:1px solid #e6e8f5; padding:17px 18px; border-radius:18px; box-shadow:0 8px 25px rgba(45,52,99,.055); }
+div[data-testid="stMetricLabel"] { color:#78819b; }
+div[data-testid="stMetricValue"] { color:#242b4c; font-family:'Manrope',sans-serif; font-weight:800; }
+div[data-testid="stVerticalBlockBorderWrapper"] { background:rgba(255,255,255,.8); border:1px solid #e7e9f5; border-radius:18px; }
+.stButton>button, .stFormSubmitButton>button { border-radius:12px; font-weight:700; min-height:44px; border:0; background:linear-gradient(100deg,#6655df,#4e83e9); color:white; box-shadow:0 7px 17px rgba(91,91,218,.18); }
+.stButton>button:hover, .stFormSubmitButton>button:hover { color:white; border:0; filter:brightness(1.06); }
+.stTextInput input, .stTextArea textarea, [data-testid="stFileUploader"] { border-radius:13px; }
+hr { border-color:#e4e7f3; }
+[data-testid="stCaptionContainer"] { color:#7b849d; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -37,12 +62,33 @@ def api(method, path, **kwargs):
 
 def show_analysis(result):
     score = result.get("readiness_score", 0)
+    authenticity = result.get("authenticity_check", {})
+    st.markdown('<div class="section-kicker">Your resume insights</div>', unsafe_allow_html=True)
     a, b, c = st.columns(3)
     a.metric("Resume readiness", f"{score}/100")
     b.metric("Skills identified", result.get("skill_count", 0))
-    c.metric("Word count", result.get("word_count", 0))
+    c.metric("Words extracted", result.get("word_count", 0))
     st.caption(result.get("score_label", "CareerLens heuristic score"))
-    st.subheader("Extracted skills")
+
+    if authenticity:
+        risk = int(authenticity.get("risk_score", 0))
+        st.markdown("### Resume authenticity screening")
+        left, right = st.columns([1, 2])
+        left.metric("Review risk", f"{risk}/100", authenticity.get("risk_level", ""))
+        if risk >= 55:
+            right.error("High review needed — please verify the details below.")
+        elif risk >= 25:
+            right.warning("Some review signals were found. Please check the details.")
+        else:
+            right.success("No strong warning signals detected by this screening.")
+        signals = authenticity.get("signals", [])
+        if signals:
+            for signal in signals: st.write("• " + signal)
+        else:
+            st.write("No configured placeholder, repetition or short-text warning signals were detected.")
+        st.caption(authenticity.get("disclaimer", "Heuristic screening only; not proof of authenticity."))
+
+    st.markdown("### Extracted skills")
     skills = result.get("skills", [])
     st.write(" · ".join(skills) if skills else "No skills confidently identified.")
     profile = result.get("profile_summary", {})
@@ -51,21 +97,21 @@ def show_analysis(result):
         st.write("**Phone:**", profile.get("phone") or "Not detected")
         st.write("**Education mentions:**", "; ".join(profile.get("education_mentions", [])) or "Not detected")
         st.write("**Estimated experience:**", f"{profile['estimated_experience_years']} years" if profile.get("estimated_experience_years") is not None else "Not detected")
-    st.subheader("Score breakdown")
+    st.markdown("### Score breakdown")
     for key, value in result.get("score_breakdown", {}).items():
         st.write(f"**{key.replace('_', ' ').title()}** — {value}/100")
         st.progress(max(0, min(100, int(value))))
     not_detected = result.get("possible_missing_skills", [])
     if not_detected:
-        st.caption("Other known skills not detected (these are not automatically required for your target role): " + ", ".join(not_detected))
-    st.subheader("Improvement suggestions")
-    for item in result.get("improvement_suggestions", []): st.write(f"- {item}")
+        st.caption("Other known skills not detected (not automatically required): " + ", ".join(not_detected))
+    st.markdown("### Recommended improvements")
+    for item in result.get("improvement_suggestions", []): st.write("• " + item)
     meta = result.get("parser_metadata", {})
     st.caption(f"Parser: {meta.get('parser', 'N/A')} | OCR used: {meta.get('ocr_used', False)}")
-    for warning in result.get("limitations", []): st.caption(f"Note: {warning}")
+    for warning in result.get("limitations", []): st.caption("Note: " + warning)
 
 def show_recommendations(items):
-    st.subheader("Job recommendations")
+    st.markdown("### Career matches")
     if not items:
         st.info("No sample jobs are currently available.")
         return
@@ -79,40 +125,40 @@ def show_recommendations(items):
             st.write("**Matched:** " + (", ".join(item.get("matched_skills", [])) or "None identified"))
             st.write("**Skills to build:** " + (", ".join(item.get("missing_skills", [])) or "No listed skill gaps"))
             url = item.get("apply_url")
-            if url and "example.com" not in url:
-                st.link_button("View opportunity", url)
-            else:
-                st.caption("Demonstration dataset entry — replace with verified live job listings before production.")
+            if url and "example.com" not in url: st.link_button("View opportunity", url)
+            else: st.caption("Demonstration dataset entry — replace with verified live job listings before production.")
 
-st.sidebar.title("🎯 CareerLens")
-st.sidebar.caption("Resume Intelligence & Career Assistant")
+st.sidebar.markdown("<div style='padding:12px 4px 22px'><div style='font-size:2rem'>✦</div><div style='font-size:1.35rem;font-weight:800;letter-spacing:-.5px'>CareerLens</div><div style='font-size:.76rem;opacity:.72'>RESUME INTELLIGENCE</div></div>", unsafe_allow_html=True)
 if st.session_state.user:
     st.sidebar.success(f"Signed in: {st.session_state.user.get('full_name', '')}")
-    pages = ["Dashboard", "Upload Resume", "Resume History", "Job Explorer", "Account Settings"]
-    if st.session_state.user.get("is_admin"): pages.append("Admin Dashboard")
-    page = st.sidebar.radio("Navigation", pages)
-    if st.sidebar.button("Log out", use_container_width=True):
+    pages = ["🏠  Dashboard", "📄  Upload Resume", "🗂️  Resume History", "💼  Job Explorer", "⚙️  Account Settings"]
+    if st.session_state.user.get("is_admin"): pages.append("🛡️  Admin Dashboard")
+    selected_page = st.sidebar.radio("WORKSPACE", pages, label_visibility="visible")
+    page = selected_page.split("  ", 1)[-1]
+    if st.sidebar.button("↪  Log out", use_container_width=True):
         st.session_state.token = None; st.session_state.user = None; st.session_state.selected_resume = None
         st.rerun()
 else:
-    page = st.sidebar.radio("Navigation", ["Home / Guest Analysis", "Login", "Register"])
+    selected_page = st.sidebar.radio("GET STARTED", ["🏠  Home / Guest Analysis", "🔐  Login", "✨  Register"])
+    page = selected_page.split("  ", 1)[-1]
 
 if page == "Home / Guest Analysis":
-    st.markdown('<div class="hero"><h1>CareerLens</h1><p>Understand your resume. Discover skill gaps. Explore career opportunities.</p></div>', unsafe_allow_html=True)
-    st.write("Upload a PDF, Word document or a clear resume image. Guest analysis is temporary and the uploaded file is deleted after processing.")
+    st.markdown('<div class="hero"><div class="eyebrow">Your next career move starts here</div><h1>See your potential.<br>Shape your future.</h1><p>Understand your resume, uncover skill gaps and discover opportunities with CareerLens.</p></div>', unsafe_allow_html=True)
+    st.markdown("### Start with your resume")
+    st.write("Upload a PDF, Word document or clear resume image. Guest analysis is temporary; the uploaded file is deleted after processing.")
     uploaded = st.file_uploader("Choose your resume", type=["pdf", "docx", "jpg", "jpeg", "png"], key="guest_file")
-    if st.button("Analyze as guest", type="primary", disabled=uploaded is None):
-        with st.spinner("Reading and analysing your resume. Image and scanned PDF files may take longer..."):
+    if st.button("✦  Analyze my resume", type="primary", disabled=uploaded is None):
+        with st.spinner("Reading and analysing your resume. Scanned documents may take longer..."):
             response = api("POST", "/guest/analyze", files={"file": (uploaded.name, uploaded.getvalue(), uploaded.type or "application/octet-stream")})
         if response:
             payload = response.json()
-            st.success("Guest analysis completed. This result is not saved to a user account.")
+            st.success("Analysis completed. This guest result is not saved to an account.")
             show_analysis(payload["analysis"])
             show_recommendations(payload.get("recommendations", []))
     st.info("Create a free account to save resumes, view analysis history, re-analyse files and download reports.")
 
 elif page == "Login":
-    st.title("Welcome back")
+    st.markdown('<div class="hero"><div class="eyebrow">Your career workspace</div><h1>Welcome back.</h1><p>Pick up where your career journey left off.</p></div>', unsafe_allow_html=True)
     with st.form("login_form"):
         email = st.text_input("Email")
         password = st.text_input("Password", type="password")
@@ -125,7 +171,7 @@ elif page == "Login":
             if me: st.session_state.user = me.json(); st.rerun()
 
 elif page == "Register":
-    st.title("Create your CareerLens account")
+    st.markdown('<div class="hero"><div class="eyebrow">Create your free account</div><h1>Make your next move.</h1><p>Save your progress and keep your resume journey organised.</p></div>', unsafe_allow_html=True)
     with st.form("register_form"):
         full_name = st.text_input("Full name")
         email = st.text_input("Email")
@@ -133,11 +179,10 @@ elif page == "Register":
         submit = st.form_submit_button("Create account", type="primary")
     if submit:
         response = api("POST", "/auth/register", json={"full_name": full_name, "email": email, "password": password})
-        if response:
-            st.success("Account created. Please log in.")
+        if response: st.success("Account created. Please log in.")
 
 elif page == "Dashboard":
-    st.title("Your CareerLens dashboard")
+    st.markdown('<div class="hero"><div class="eyebrow">Personal workspace</div><h1>Your career at a glance.</h1><p>Track your resumes, analysis progress and next steps.</p></div>', unsafe_allow_html=True)
     response = api("GET", "/resumes")
     resumes = response.json() if response else []
     a, b, c = st.columns(3)
@@ -169,8 +214,7 @@ elif page == "Resume History":
             cols[0].write(f"**{item['original_filename']}**")
             cols[1].write(item["status"].title())
             cols[2].write(item["created_at"][:10])
-            if cols[3].button("Open", key=f"open_{item['id']}"):
-                st.session_state.selected_resume = item["id"]
+            if cols[3].button("Open", key=f"open_{item['id']}"): st.session_state.selected_resume = item["id"]
             if item.get("error_message"): st.warning(item["error_message"])
     selected = st.session_state.selected_resume
     if selected:
@@ -190,9 +234,7 @@ elif page == "Resume History":
                     corrected_text = st.text_area("Extracted text", value=payload.get("extracted_text") or "", height=220, key=f"correct_text_{selected}")
                     if st.button("Save correction and refresh analysis", key=f"correct_{selected}"):
                         correction = api("PATCH", f"/resumes/{selected}/correction", json={"corrected_text": corrected_text})
-                        if correction:
-                            st.success("Your corrected text was saved and re-analysed.")
-                            st.rerun()
+                        if correction: st.success("Your corrected text was saved and re-analysed."); st.rerun()
                 rec = api("GET", f"/resumes/{selected}/recommendations")
                 if rec: show_recommendations(rec.json().get("recommendations", []))
                 d1, d2 = st.columns(2)
@@ -229,16 +271,12 @@ elif page == "Account Settings":
         confirm_delete = st.checkbox("I understand that my account data will be permanently deleted.")
         submitted = st.form_submit_button("Delete my account", type="secondary")
     if submitted:
-        if not confirm_delete:
-            st.error("Please confirm that you understand the deletion is permanent.")
+        if not confirm_delete: st.error("Please confirm that you understand the deletion is permanent.")
         else:
             deletion = api("DELETE", "/auth/me", json={"password": confirm_password})
             if deletion is not None:
-                st.session_state.token = None
-                st.session_state.user = None
-                st.session_state.selected_resume = None
-                st.success("Your account and saved resume data have been deleted.")
-                st.rerun()
+                st.session_state.token = None; st.session_state.user = None; st.session_state.selected_resume = None
+                st.success("Your account and saved resume data have been deleted."); st.rerun()
 
 elif page == "Admin Dashboard":
     st.title("Administrator dashboard")
@@ -251,4 +289,4 @@ elif page == "Admin Dashboard":
         st.json(stats)
 
 st.divider()
-st.caption("CareerLens is a decision-support tool. Resume scores and job matches are estimates, not guarantees of employment or employer ATS decisions.")
+st.caption("CareerLens is a decision-support tool. Readiness scores, authenticity indicators and job matches are estimates, not guarantees or proof of employer ATS decisions.")
