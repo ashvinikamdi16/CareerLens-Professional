@@ -13,9 +13,31 @@ from backend.app.schemas import ResumeResponse, ResumeCorrectionRequest
 from backend.app.services.storage import validate_and_store, remove_file
 from backend.app.services.analyzer import match_jobs
 from backend.app.services.report import create_report
-from backend.app.tasks import process_resume
+from backend.app.services.resume_parser import extract_text
+from backend.app.services.analyzer import build_analysis
 
 router = APIRouter(prefix="/resumes", tags=["Resume management"])
+
+
+def _analyse_resume_now(resume: Resume, db: Session) -> None:
+    """Process the uploaded file inside the API service so no separate Celery worker is required."""
+    try:
+        resume.status = "processing"
+        resume.error_message = None
+        db.commit()
+        extracted_text, metadata = extract_text(resume.file_path, resume.mime_type)
+        result = build_analysis(extracted_text, metadata)
+        db.add(AnalysisResult(resume_id=resume.id, extracted_text=extracted_text, result_json=result))
+        resume.status = "completed"
+        resume.error_message = None
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        current = db.get(Resume, resume.id)
+        if current:
+            current.status = "failed"
+            current.error_message = str(exc)[:1000]
+            db.commit()
 
 @router.post("/upload", response_model=ResumeResponse, status_code=202)
 async def upload_resume(file: UploadFile = File(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -35,12 +57,8 @@ async def upload_resume(file: UploadFile = File(...), user: User = Depends(get_c
         remove_file(saved["file_path"])
         raise HTTPException(409, "You have already uploaded this exact file.")
     db.refresh(resume)
-    try:
-        process_resume.delay(resume.id)
-    except Exception:
-        resume.status = "failed"
-        resume.error_message = "The analysis queue is unavailable. Please try again later or contact the administrator."
-        db.commit()
+    _analyse_resume_now(resume, db)
+    db.refresh(resume)
     return resume
 
 @router.get("", response_model=list[ResumeResponse])
@@ -75,13 +93,10 @@ def reanalyze(resume_id: int, user: User = Depends(get_current_user), db: Sessio
     resume = db.query(Resume).filter(Resume.id == resume_id, Resume.owner_id == user.id).first()
     if not resume: raise HTTPException(404, "Resume not found.")
     resume.status = "queued"; resume.error_message = None; db.commit(); db.refresh(resume)
-    try:
-        process_resume.delay(resume.id)
-    except Exception:
-        resume.status = "failed"
-        resume.error_message = "The analysis queue is unavailable. Please try again later."
-        db.commit()
-        raise HTTPException(503, resume.error_message)
+    _analyse_resume_now(resume, db)
+    db.refresh(resume)
+    if resume.status == "failed":
+        raise HTTPException(422, resume.error_message or "Resume analysis failed.")
     return resume
 
 @router.get("/{resume_id}/recommendations")
