@@ -40,6 +40,32 @@ hr { border-color:#e4e7f3; }
 </style>
 """, unsafe_allow_html=True)
 
+# Theme selector is available before login as well as inside the signed-in workspace.
+dark_mode = st.sidebar.toggle("🌙 Dark theme", value=st.session_state.get("dark_mode", False), key="dark_mode")
+if dark_mode:
+    st.markdown("""
+    <style>
+    .stApp { background:linear-gradient(145deg,#0b1020 0%,#111a2e 55%,#17142b 100%) !important; color:#edf1ff !important; }
+    [data-testid="stHeader"] { background:rgba(11,16,32,.88) !important; }
+    [data-testid="stMarkdownContainer"], [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] li, .stText, label, .stCaption,
+    [data-testid="stCaptionContainer"] { color:#e5e9f7 !important; }
+    h1,h2,h3,h4,h5,h6 { color:#f7f8ff !important; }
+    div[data-testid="stMetric"] { background:#1b2540 !important; border-color:#34415f !important; }
+    div[data-testid="stMetricLabel"] { color:#b7c1dc !important; }
+    div[data-testid="stMetricValue"] { color:#ffffff !important; }
+    div[data-testid="stVerticalBlockBorderWrapper"],
+    [data-testid="stExpander"], [data-testid="stFileUploader"],
+    [data-testid="stForm"] { background:#17213a !important; border-color:#34415f !important; }
+    .stTextInput input, .stTextArea textarea, [data-baseweb="select"] > div {
+      background:#101a30 !important; color:#f4f6ff !important; border-color:#455473 !important;
+    }
+    [data-testid="stFileUploader"] section { background:#17213a !important; }
+    [data-testid="stAlert"] { color:#f4f6ff !important; }
+    hr { border-color:#34415f !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
 if "token" not in st.session_state: st.session_state.token = None
 if "user" not in st.session_state: st.session_state.user = None
 if "selected_resume" not in st.session_state: st.session_state.selected_resume = None
@@ -196,11 +222,15 @@ elif page == "Upload Resume":
     st.title("Upload and save a resume")
     uploaded = st.file_uploader("PDF, DOCX, JPG, JPEG or PNG", type=["pdf", "docx", "jpg", "jpeg", "png"], key="signed_file")
     if st.button("Upload and analyse", type="primary", disabled=uploaded is None):
-        with st.spinner("Uploading securely and submitting analysis job..."):
+        with st.spinner("Saving your resume and analysing it now..."):
             response = api("POST", "/resumes/upload", files={"file": (uploaded.name, uploaded.getvalue(), uploaded.type or "application/octet-stream")})
         if response:
-            st.session_state.selected_resume = response.json()["id"]
-            st.success(f"Resume saved. Analysis job queued (ID {response.json()['id']}). Open Resume History and refresh its status.")
+            saved = response.json()
+            st.session_state.selected_resume = saved["id"]
+            if saved.get("status") == "completed":
+                st.success(f"Resume saved and analysed successfully (ID {saved['id']}). Open Resume History to view your results.")
+            else:
+                st.error(saved.get("error_message") or "Resume was saved, but analysis could not be completed. Open Resume History for details.")
 
 elif page == "Resume History":
     st.title("Your resume history")
