@@ -21,3 +21,20 @@ def test_job_matcher_ranks_skill_overlap():
     ranked = match_jobs("Python SQL developer", ["Python", "SQL"], jobs)
     assert ranked[0]["id"] == 1
     assert ranked[0]["match_percentage"] > ranked[1]["match_percentage"]
+
+
+def test_authenticity_screen_flags_template_placeholders():
+    from backend.app.services.analyzer import assess_resume_authenticity
+    result = assess_resume_authenticity("Your Name Here\nEmail: your email here\nLorem ipsum dolor sit amet.")
+    assert result["risk_score"] >= 25
+    assert result["signals"]
+    assert "not proof" in result["disclaimer"].lower()
+
+
+def test_authenticity_screen_does_not_claim_resume_is_fake():
+    from backend.app.services.analyzer import assess_resume_authenticity
+    text = ("Alex Morgan\nEmail: alex.morgan@example.org\n" +
+            " ".join(["Developed and maintained software projects with Python and SQL."] * 20))
+    result = assess_resume_authenticity(text)
+    assert result["risk_level"] in {"Low indicators", "Review recommended", "High review needed"}
+    assert "fake" not in result["status"].lower()
