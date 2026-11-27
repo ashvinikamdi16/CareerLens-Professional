@@ -5,7 +5,7 @@ from backend.app.core.database import get_db
 from backend.app.core.config import settings
 from backend.app.core.rate_limit import limit_guest_analysis
 from backend.app.models import Job
-from backend.app.services.storage import validate_and_store, remove_file
+from backend.app.services.storage import validate_and_store, remove_file, materialize_file, cleanup_materialized_file
 from backend.app.services.resume_parser import extract_text, ResumeParseError
 from backend.app.services.analyzer import build_analysis, match_jobs
 
@@ -21,7 +21,11 @@ def guest_analyze(file: UploadFile = File(...), _: None = Depends(limit_guest_an
         raise
     try:
         try:
-            text, metadata = extract_text(saved["file_path"], saved["mime_type"])
+            local_path, temporary = materialize_file(saved["file_path"])
+            try:
+                text, metadata = extract_text(local_path, saved["mime_type"])
+            finally:
+                cleanup_materialized_file(local_path, temporary)
         except ResumeParseError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         analysis = build_analysis(text, metadata)
