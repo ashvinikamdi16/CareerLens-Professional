@@ -18,10 +18,10 @@ html, body, [class*="css"] { font-family:'DM Sans',sans-serif; }
 .stApp { background: radial-gradient(ellipse at 85% 0%, rgba(128,103,239,.14), transparent 34%), linear-gradient(145deg,#f7f8ff 0%,#eef2ff 52%,#f9f7ff 100%); color:var(--cl-ink); }
 [data-testid="stHeader"] { background:rgba(247,248,255,.82); }
 .block-container { padding-top:2rem; padding-bottom:3rem; max-width:1320px; }
-[data-testid="stSidebar"] { background:linear-gradient(180deg,#111a35 0%,#202b50 55%,#30265a 100%); border-right:1px solid rgba(255,255,255,.08); }
+[data-testid="stSidebar"] { background:linear-gradient(180deg,#101a34 0%,#1b2850 58%,#29234f 100%); border-right:1px solid rgba(255,255,255,.10); box-shadow:8px 0 28px rgba(24,32,70,.08); }
 [data-testid="stSidebar"] * { color:#f4f5ff !important; }
-[data-testid="stSidebar"] [data-testid="stRadio"] label { padding:9px 12px; border-radius:11px; }
-[data-testid="stSidebar"] [data-testid="stRadio"] label:hover { background:rgba(255,255,255,.12); }
+[data-testid="stSidebar"] [data-testid="stRadio"] label { padding:11px 13px; margin:3px 0; border:1px solid transparent; border-radius:12px; transition:background .18s ease,border-color .18s ease; font-weight:650; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover { background:rgba(255,255,255,.10); border-color:rgba(255,255,255,.12); }\n[data-testid="stSidebar"] [data-testid="stRadio"] [aria-checked="true"] { background:rgba(143,133,255,.22); border-color:rgba(183,177,255,.36); }\n[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"] p { font-weight:650; }\n[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p { color:#c8d0f0 !important; font-size:.70rem; letter-spacing:1.4px; font-weight:800; }
 [data-testid="stSidebar"] button { border:1px solid rgba(255,255,255,.2); border-radius:12px; }
 .hero { padding:34px 38px; border-radius:25px; color:white; background:linear-gradient(110deg,rgba(17,25,54,.96),rgba(67,61,139,.90)),url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=85') center/cover; box-shadow:0 18px 45px rgba(36,42,91,.18); margin:4px 0 24px; }
 .hero h1 { font-family:'Manrope',sans-serif; font-size:2.6rem; font-weight:800; letter-spacing:-1.4px; margin:0 0 8px; }
