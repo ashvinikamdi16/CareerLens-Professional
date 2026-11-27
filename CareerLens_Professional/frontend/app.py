@@ -45,24 +45,52 @@ dark_mode = st.sidebar.toggle("🌙 Dark theme", value=st.session_state.get("dar
 if dark_mode:
     st.markdown("""
     <style>
-    .stApp { background:linear-gradient(145deg,#0b1020 0%,#111a2e 55%,#17142b 100%) !important; color:#edf1ff !important; }
-    [data-testid="stHeader"] { background:rgba(11,16,32,.88) !important; }
-    [data-testid="stMarkdownContainer"], [data-testid="stMarkdownContainer"] p,
-    [data-testid="stMarkdownContainer"] li, .stText, label, .stCaption,
-    [data-testid="stCaptionContainer"] { color:#e5e9f7 !important; }
-    h1,h2,h3,h4,h5,h6 { color:#f7f8ff !important; }
-    div[data-testid="stMetric"] { background:#1b2540 !important; border-color:#34415f !important; }
-    div[data-testid="stMetricLabel"] { color:#b7c1dc !important; }
-    div[data-testid="stMetricValue"] { color:#ffffff !important; }
-    div[data-testid="stVerticalBlockBorderWrapper"],
-    [data-testid="stExpander"], [data-testid="stFileUploader"],
-    [data-testid="stForm"] { background:#17213a !important; border-color:#34415f !important; }
-    .stTextInput input, .stTextArea textarea, [data-baseweb="select"] > div {
-      background:#101a30 !important; color:#f4f6ff !important; border-color:#455473 !important;
+    /* Apply a consistent dark palette to Streamlit's main canvas and widgets. */
+    .stApp, [data-testid="stAppViewContainer"] {
+        background: linear-gradient(145deg,#0b1020 0%,#111a2e 55%,#17142b 100%) !important;
+        color: #edf1ff !important;
     }
-    [data-testid="stFileUploader"] section { background:#17213a !important; }
-    [data-testid="stAlert"] { color:#f4f6ff !important; }
-    hr { border-color:#34415f !important; }
+    [data-testid="stHeader"], [data-testid="stToolbar"] {
+        background: rgba(11,16,32,.92) !important;
+    }
+    [data-testid="stMain"], [data-testid="stMainBlockContainer"] {
+        color: #edf1ff !important;
+    }
+    [data-testid="stMarkdownContainer"], [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] li, [data-testid="stCaptionContainer"],
+    [data-testid="stText"], label, .stText, .stCaption,
+    h1,h2,h3,h4,h5,h6 {
+        color: #edf1ff !important;
+    }
+    [data-testid="stMetric"], [data-testid="stVerticalBlockBorderWrapper"],
+    [data-testid="stExpander"], [data-testid="stForm"],
+    [data-testid="stFileUploader"], [data-testid="stAlert"] {
+        background: #17213a !important;
+        color: #edf1ff !important;
+        border-color: #34415f !important;
+    }
+    [data-testid="stMetricLabel"] { color: #b7c1dc !important; }
+    [data-testid="stMetricValue"] { color: #ffffff !important; }
+    input, textarea, [data-baseweb="select"] > div,
+    [data-baseweb="input"] > div, [data-baseweb="textarea"] {
+        background: #101a30 !important;
+        color: #f4f6ff !important;
+        border-color: #455473 !important;
+    }
+    input::placeholder, textarea::placeholder { color: #aab5d0 !important; }
+    [data-testid="stFileUploader"] section,
+    [data-testid="stFileUploader"] button {
+        background: #17213a !important;
+        color: #f4f6ff !important;
+        border-color: #455473 !important;
+    }
+    [data-testid="stAlert"] p, [data-testid="stAlert"] div {
+        color: #f4f6ff !important;
+    }
+    [data-testid="stDataFrame"], [data-testid="stTable"] {
+        filter: invert(.88) hue-rotate(180deg);
+    }
+    hr { border-color: #34415f !important; }
     </style>
     """, unsafe_allow_html=True)
 
