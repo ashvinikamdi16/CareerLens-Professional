@@ -1,4 +1,3 @@
-from pathlib import Path
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
@@ -10,7 +9,7 @@ from backend.app.core.rate_limit import apply_rate_limit
 from backend.app.dependencies import get_current_user
 from backend.app.models import User, Resume, AnalysisResult, Job
 from backend.app.schemas import ResumeResponse, ResumeCorrectionRequest
-from backend.app.services.storage import validate_and_store, remove_file
+from backend.app.services.storage import validate_and_store, remove_file, materialize_file, cleanup_materialized_file, read_stored_file
 from backend.app.services.analyzer import match_jobs
 from backend.app.services.report import create_report
 from backend.app.services.resume_parser import extract_text
@@ -25,7 +24,11 @@ def _analyse_resume_now(resume: Resume, db: Session) -> None:
         resume.status = "processing"
         resume.error_message = None
         db.commit()
-        extracted_text, metadata = extract_text(resume.file_path, resume.mime_type)
+        local_path, temporary = materialize_file(resume.file_path)
+        try:
+            extracted_text, metadata = extract_text(local_path, resume.mime_type)
+        finally:
+            cleanup_materialized_file(local_path, temporary)
         result = build_analysis(extracted_text, metadata)
         db.add(AnalysisResult(resume_id=resume.id, extracted_text=extracted_text, result_json=result))
         resume.status = "completed"
@@ -113,9 +116,14 @@ def recommendations(resume_id: int, user: User = Depends(get_current_user), db: 
 def download_resume(resume_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     resume = db.query(Resume).filter(Resume.id == resume_id, Resume.owner_id == user.id).first()
     if not resume: raise HTTPException(404, "Resume not found.")
-    path = Path(resume.file_path)
-    if not path.exists(): raise HTTPException(404, "Stored file is unavailable.")
-    return FileResponse(path, media_type=resume.mime_type, filename=resume.original_filename)
+    try:
+        content = read_stored_file(resume.file_path)
+    except HTTPException:
+        raise
+    except OSError:
+        raise HTTPException(404, "Stored file is unavailable.")
+    safe_name = resume.original_filename.replace("\\", "_").replace('"', "")
+    return Response(content=content, media_type=resume.mime_type, headers={"Content-Disposition": f'attachment; filename="{safe_name}"'})
 
 @router.get("/{resume_id}/report")
 def download_report(resume_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
