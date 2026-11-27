@@ -103,7 +103,7 @@ def api(method, path, **kwargs):
     if st.session_state.token:
         headers["Authorization"] = f"Bearer {st.session_state.token}"
     try:
-        response = requests.request(method, f"{API}{path}", headers=headers, timeout=90, **kwargs)
+        response = requests.request(method, f"{API}{path}", headers=headers, timeout=180, **kwargs)
         if response.status_code >= 400:
             try: detail = response.json().get("detail", response.text)
             except Exception: detail = response.text
