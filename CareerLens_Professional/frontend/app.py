@@ -193,7 +193,15 @@ if st.session_state.user:
         st.session_state.token = None; st.session_state.user = None; st.session_state.selected_resume = None
         st.rerun()
 else:
-    selected_page = st.sidebar.radio("GET STARTED", ["🏠  Home / Guest Analysis", "🔐  Login", "✨  Register"])
+    st.sidebar.markdown("**Welcome to CareerLens**")
+    st.sidebar.caption("Choose a workspace option below.")
+    selected_page = st.radio(
+        "GET STARTED",
+        ["🏠  Home / Guest Analysis", "🔐  Login", "✨  Register"],
+        horizontal=True,
+        label_visibility="visible",
+        key="public_navigation",
+    )
     page = selected_page.split("  ", 1)[-1]
 
 if page == "Home / Guest Analysis":
