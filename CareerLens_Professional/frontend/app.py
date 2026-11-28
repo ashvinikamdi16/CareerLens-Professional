@@ -18,7 +18,8 @@ html, body, [class*="css"] { font-family:'DM Sans',sans-serif; }
 .stApp { background: radial-gradient(ellipse at 85% 0%, rgba(128,103,239,.14), transparent 34%), linear-gradient(145deg,#f7f8ff 0%,#eef2ff 52%,#f9f7ff 100%); color:var(--cl-ink); }
 [data-testid="stHeader"] { background:rgba(247,248,255,.82); }
 .block-container { padding-top:2rem; padding-bottom:3rem; max-width:1320px; }
-/* Hide the desktop sidebar collapse chevron; keep mobile navigation usable. */\n[data-testid="stSidebarCollapseButton"] { display:none !important; visibility:hidden !important; pointer-events:none !important; }\n@media (max-width: 768px) { [data-testid="stSidebarCollapseButton"] { display:inline !important; visibility:visible !important; pointer-events:auto !important; } }\n[data-testid="stSidebar"] { background:linear-gradient(180deg,#101a34 0%,#1b2850 58%,#29234f 100%); border-right:1px solid rgba(255,255,255,.10); box-shadow:8px 0 28px rgba(24,32,70,.08); }
+/* Hide the desktop sidebar collapse chevron; keep mobile navigation usable. */
+[data-testid="stSidebarCollapseButton"] { display:none !important; visibility:hidden !important; pointer-events:none !important; }\n@media (max-width: 768px) { [data-testid="stSidebarCollapseButton"] { display:inline !important; visibility:visible !important; pointer-events:auto !important; } }\n[data-testid="stSidebar"] { background:linear-gradient(180deg,#101a34 0%,#1b2850 58%,#29234f 100%); border-right:1px solid rgba(255,255,255,.10); box-shadow:8px 0 28px rgba(24,32,70,.08); }
 [data-testid="stSidebar"] * { color:#f4f5ff !important; }
 [data-testid="stSidebar"] [data-testid="stRadio"] label { padding:11px 13px; margin:3px 0; border:1px solid transparent; border-radius:12px; transition:background .18s ease,border-color .18s ease; font-weight:650; }
 [data-testid="stSidebar"] [data-testid="stRadio"] label:hover { background:rgba(255,255,255,.10); border-color:rgba(255,255,255,.12); }
