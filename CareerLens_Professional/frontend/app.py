@@ -21,7 +21,10 @@ html, body, [class*="css"] { font-family:'DM Sans',sans-serif; }
 [data-testid="stSidebar"] { background:linear-gradient(180deg,#101a34 0%,#1b2850 58%,#29234f 100%); border-right:1px solid rgba(255,255,255,.10); box-shadow:8px 0 28px rgba(24,32,70,.08); }
 [data-testid="stSidebar"] * { color:#f4f5ff !important; }
 [data-testid="stSidebar"] [data-testid="stRadio"] label { padding:11px 13px; margin:3px 0; border:1px solid transparent; border-radius:12px; transition:background .18s ease,border-color .18s ease; font-weight:650; }
-[data-testid="stSidebar"] [data-testid="stRadio"] label:hover { background:rgba(255,255,255,.10); border-color:rgba(255,255,255,.12); }\n[data-testid="stSidebar"] [data-testid="stRadio"] [aria-checked="true"] { background:rgba(143,133,255,.22); border-color:rgba(183,177,255,.36); }\n[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"] p { font-weight:650; }\n[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p { color:#c8d0f0 !important; font-size:.70rem; letter-spacing:1.4px; font-weight:800; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover { background:rgba(255,255,255,.10); border-color:rgba(255,255,255,.12); }
+[data-testid="stSidebar"] [data-testid="stRadio"] [aria-checked="true"] { background:rgba(143,133,255,.22); border-color:rgba(183,177,255,.36); }
+[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"] p { font-weight:650; }
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p { color:#c8d0f0 !important; font-size:.70rem; letter-spacing:1.4px; font-weight:800; }
 [data-testid="stSidebar"] button { border:1px solid rgba(255,255,255,.2); border-radius:12px; }
 .hero { padding:34px 38px; border-radius:25px; color:white; background:linear-gradient(110deg,rgba(17,25,54,.96),rgba(67,61,139,.90)),url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=85') center/cover; box-shadow:0 18px 45px rgba(36,42,91,.18); margin:4px 0 24px; }
 .hero h1 { font-family:'Manrope',sans-serif; font-size:2.6rem; font-weight:800; letter-spacing:-1.4px; margin:0 0 8px; }
@@ -40,8 +43,19 @@ hr { border-color:#e4e7f3; }
 </style>
 """, unsafe_allow_html=True)
 
-# Theme selector is available before login as well as inside the signed-in workspace.
-dark_mode = st.sidebar.toggle("🌙 Dark theme", value=st.session_state.get("dark_mode", False), key="dark_mode")
+# One theme selector for guest and signed-in users. The URL preference is browser/device-local
+# because each browser keeps its own address; it also survives a refresh or a later visit.
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = st.query_params.get("cl_theme", "light").lower() == "dark"
+
+def _save_theme_preference():
+    st.query_params["cl_theme"] = "dark" if st.session_state.dark_mode else "light"
+
+dark_mode = st.sidebar.toggle(
+    "🌙 Dark theme",
+    key="dark_mode",
+    on_change=_save_theme_preference,
+)
 if dark_mode:
     st.markdown("""
     <style>
@@ -203,6 +217,22 @@ else:
         key="public_navigation",
     )
     page = selected_page.split("  ", 1)[-1]
+
+# Give each page its own light-mode background while keeping dark mode consistent.
+if not dark_mode:
+    light_page_backgrounds = {
+        "Home / Guest Analysis": "radial-gradient(ellipse at 85% 0%, rgba(128,103,239,.16), transparent 34%), linear-gradient(145deg,#f7f8ff 0%,#eef2ff 52%,#f9f7ff 100%)",
+        "Login": "radial-gradient(ellipse at 12% 10%, rgba(79,140,220,.16), transparent 36%), linear-gradient(145deg,#f2f8ff,#eaf2ff 55%,#f7fbff)",
+        "Register": "radial-gradient(ellipse at 88% 8%, rgba(36,170,145,.15), transparent 36%), linear-gradient(145deg,#f0fbf8,#e5f6f0 55%,#f8fffb)",
+        "Dashboard": "radial-gradient(ellipse at 10% 0%, rgba(232,166,75,.15), transparent 35%), linear-gradient(145deg,#fff9ef,#fff1df 55%,#fffdf7)",
+        "Upload Resume": "radial-gradient(ellipse at 88% 0%, rgba(74,145,210,.15), transparent 35%), linear-gradient(145deg,#f1f9ff,#e7f3fb 55%,#fbfdff)",
+        "Resume History": "radial-gradient(ellipse at 12% 0%, rgba(156,117,205,.15), transparent 35%), linear-gradient(145deg,#faf5ff,#f1eafd 55%,#fffaff)",
+        "Job Explorer": "radial-gradient(ellipse at 88% 0%, rgba(60,170,120,.15), transparent 35%), linear-gradient(145deg,#f1fbf4,#e8f6eb 55%,#fbfffc)",
+        "Account Settings": "radial-gradient(ellipse at 12% 0%, rgba(220,125,125,.14), transparent 35%), linear-gradient(145deg,#fff5f4,#fbeceb 55%,#fffafa)",
+        "Admin Dashboard": "radial-gradient(ellipse at 88% 0%, rgba(90,115,190,.16), transparent 35%), linear-gradient(145deg,#f2f5ff,#e8edff 55%,#fbfcff)",
+    }
+    page_bg = light_page_backgrounds.get(page, light_page_backgrounds["Home / Guest Analysis"])
+    st.markdown(f"<style>.stApp {{ background: {page_bg} !important; }}</style>", unsafe_allow_html=True)
 
 if page == "Home / Guest Analysis":
     st.markdown('<div class="hero"><div class="eyebrow">Your next career move starts here</div><h1>See your potential.<br>Shape your future.</h1><p>Understand your resume, uncover skill gaps and discover opportunities with CareerLens.</p></div>', unsafe_allow_html=True)
