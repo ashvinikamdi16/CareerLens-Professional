@@ -209,10 +209,9 @@ if st.session_state.user:
 else:
     st.sidebar.markdown("**Welcome to CareerLens**")
     st.sidebar.caption("Choose a workspace option below.")
-    selected_page = st.radio(
+    selected_page = st.sidebar.radio(
         "GET STARTED",
         ["🏠  Home / Guest Analysis", "🔐  Login", "✨  Register"],
-        horizontal=True,
         label_visibility="visible",
         key="public_navigation",
     )
