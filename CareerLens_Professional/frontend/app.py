@@ -2,7 +2,7 @@ import os
 import requests
 import streamlit as st
 
-st.set_page_config(page_title="CareerLens | Resume Intelligence", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="CareerLens | Resume Intelligence", page_icon="🎯", layout="wide", initial_sidebar_state="locked")
 
 # Streamlit Community Cloud stores secrets in st.secrets; local/Render environments can use env vars.
 try:
